@@ -68,7 +68,7 @@ def handle_query():
     answer = answer_user_question(query)
     
     return jsonify({
-        "answer": answer
+        "response_answer": answer
     })
 
 if __name__ == '__main__':
