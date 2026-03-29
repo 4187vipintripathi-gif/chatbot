@@ -390,7 +390,7 @@
 
   sendBtn.addEventListener('click', sendMessage);
 
-  function appendMessage(role, content, isError = false) {
+  function appendMessage(role, content, isError = false, relatedQuestions = null) {
     emptyState.style.display = 'none';
 
     const wrapper = document.createElement('div');
@@ -408,6 +408,42 @@
       wrapper.id = 'typing-msg';
     } else {
       bubble.textContent = content;
+      // If there are related questions, render them below the answer
+      if (role === 'ai' && Array.isArray(relatedQuestions) && relatedQuestions.length > 0) {
+        const relatedDiv = document.createElement('div');
+        relatedDiv.className = 'related-questions';
+        relatedDiv.style.marginTop = '12px';
+        relatedDiv.style.fontSize = '13px';
+        relatedDiv.style.color = 'var(--text-muted)';
+        relatedDiv.innerHTML = '<b>Related questions:</b>';
+        const ul = document.createElement('ul');
+        ul.style.listStyle = 'none';
+        ul.style.padding = '0';
+        ul.style.margin = '8px 0 0 0';
+        relatedQuestions.forEach(q => {
+          const li = document.createElement('li');
+          li.style.marginBottom = '4px';
+          const btn = document.createElement('button');
+          btn.textContent = q;
+          btn.type = 'button';
+          btn.style.background = 'var(--surface2)';
+          btn.style.color = 'var(--accent)';
+          btn.style.border = '1px solid var(--border)';
+          btn.style.borderRadius = '8px';
+          btn.style.padding = '4px 10px';
+          btn.style.cursor = 'pointer';
+          btn.style.fontSize = '13px';
+          btn.style.marginRight = '6px';
+          btn.addEventListener('click', () => {
+            inputEl.value = q;
+            inputEl.focus();
+          });
+          li.appendChild(btn);
+          ul.appendChild(li);
+        });
+        relatedDiv.appendChild(ul);
+        bubble.appendChild(relatedDiv);
+      }
     }
 
     wrapper.appendChild(avatar);
@@ -455,7 +491,8 @@
         const reply =
           data.answer ?? data.response ?? data.result ?? data.text ??
           JSON.stringify(data, null, 2);
-        appendMessage('ai', reply);
+        // Pass related questions if present
+        appendMessage('ai', reply, false, data.suggested_questions);
       }
     } catch (err) {
       removeTyping();
