@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ask Anything</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0f;
+    --surface: #161618;
+    --surface2: #1e1e21;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.14);
+    --accent: #c8f06a;
+    --accent-dim: rgba(200,240,106,0.12);
+    --accent-glow: rgba(200,240,106,0.25);
+    --text: #f0ede8;
+    --text-muted: #7a7875;
+    --text-dim: #4a4845;
+    --user-bg: #1e2a14;
+    --user-border: rgba(200,240,106,0.2);
+    --ai-bg: #161618;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow: hidden;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+
+  /* Header */
+  .header {
+    padding: 24px 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo svg { width: 18px; height: 18px; }
+
+  .header-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 20px;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  .header-status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  /* Messages area */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 0 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface2) transparent;
+  }
+
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
+
+  /* Empty state */
+  .empty-state {
+    margin: auto;
+    text-align: center;
+    padding: 40px 0;
+    animation: fadeIn 0.6s ease;
+  }
+
+  .empty-icon {
+    font-family: 'Instrument Serif', serif;
+    font-size: 48px;
+    font-style: italic;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    line-height: 1;
+  }
+
+  .empty-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 26px;
+    font-style: italic;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .empty-sub {
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+
+  /* Message bubbles */
+  .message {
+    display: flex;
+    gap: 12px;
+    animation: slideUp 0.3s ease;
+  }
+
+  .message.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 2px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .avatar.ai {
+    background: var(--accent-dim);
+    border: 1px solid rgba(200,240,106,0.15);
+    color: var(--accent);
+  }
+
+  .avatar.user-av {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  .bubble {
+    max-width: calc(100% - 80px);
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    font-size: 15px;
+    line-height: 1.7;
+    position: relative;
+  }
+
+  .message.user .bubble {
+    background: var(--user-bg);
+    border: 1px solid var(--user-border);
+    border-bottom-right-radius: 4px;
+    color: #d8f0a8;
+  }
+
+  .message.ai .bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+  }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex;
+    gap: 5px;
+    padding: 6px 4px;
+    align-items: center;
+  }
+
+  .typing-indicator span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    animation: bounce 1.2s ease infinite;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* Error bubble */
+  .bubble.error {
+    background: rgba(220, 60, 60, 0.08);
+    border-color: rgba(220, 60, 60, 0.2);
+    color: #f07070;
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Input area */
+  .input-area {
+    padding: 16px 0 24px;
+    flex-shrink: 0;
+  }
+
+  .input-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 12px 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-box:focus-within {
+    border-color: var(--border-hover);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  #chat-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 300;
+    resize: none;
+    max-height: 160px;
+    line-height: 1.6;
+    min-height: 26px;
+  }
+
+  #chat-input::placeholder { color: var(--text-dim); }
+
+  #send-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 2px 12px rgba(200,240,106,0.2);
+  }
+
+  #send-btn:hover { opacity: 0.9; box-shadow: 0 4px 20px rgba(200,240,106,0.35); }
+  #send-btn:active { transform: scale(0.95); }
+  #send-btn:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; }
+  #send-btn svg { width: 16px; height: 16px; }
+
+  .input-hint {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.03em;
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="logo">
+      <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 2L15 5.5V12.5L9 16L3 12.5V5.5L9 2Z" fill="#0d0d0f" stroke="#0d0d0f" stroke-width="0.5"/>
+        <circle cx="9" cy="9" r="2.5" fill="#0d0d0f"/>
+        <path d="M9 4V6M9 12V14M4 6.5L6 7.5M12 10.5L14 11.5M4 11.5L6 10.5M12 7.5L14 6.5" stroke="#0d0d0f" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="header-title">Ask Anything</span>
+    <div class="header-status">
+      <div class="status-dot"></div>
+      <span>flask /query</span>
+    </div>
+  </header>
+
+  <div class="messages" id="messages">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">?</div>
+      <div class="empty-title">What would you like to know?</div>
+      <div class="empty-sub">Ask me anything — I'll find the answer</div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-box">
+      <textarea
+        id="chat-input"
+        placeholder="Type your question..."
+        rows="1"
+        autocomplete="off"
+        spellcheck="false"
+      ></textarea>
+      <button id="send-btn" title="Send">
+        <svg viewBox="0 0 16 16" fill="none">
+          <path d="M2 8h10M8 4l4 4-4 4" stroke="#0d0d0f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="input-hint">Enter to send &nbsp;·&nbsp; Shift+Enter for new line</div>
+  </div>
+</div>
+
+<script>
+  const messagesEl = document.getElementById('messages');
+  const inputEl    = document.getElementById('chat-input');
+  const sendBtn    = document.getElementById('send-btn');
+  const emptyState = document.getElementById('empty-state');
+
+  const API_URL = 'http://localhost:5000/query';
+
+  // Auto-resize textarea
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+  });
+
+  // Enter to send, Shift+Enter for newline
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  sendBtn.addEventListener('click', sendMessage);
+
+  function appendMessage(role, content, isError = false) {
+    emptyState.style.display = 'none';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = `message ${role}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = `avatar ${role === 'ai' ? 'ai' : 'user-av'}`;
+    avatar.textContent = role === 'ai' ? 'AI' : 'You';
+
+    const bubble = document.createElement('div');
+    bubble.className = `bubble${isError ? ' error' : ''}`;
+
+    if (role === 'ai' && content === '__typing__') {
+      bubble.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+      wrapper.id = 'typing-msg';
+    } else {
+      bubble.textContent = content;
+    }
+
+    wrapper.appendChild(avatar);
+    wrapper.appendChild(bubble);
+    messagesEl.appendChild(wrapper);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return wrapper;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typing-msg');
+    if (el) el.remove();
+  }
+
+  async function sendMessage() {
+    const question = inputEl.value.trim();
+    if (!question) return;
+
+    // Clear input
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    sendBtn.disabled = true;
+
+    // Show user message
+    appendMessage('user', question);
+
+    // Show typing indicator
+    appendMessage('ai', '__typing__');
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
+      });
+
+      removeTyping();
+
+      if (!response.ok) {
+        const errText = await response.text();
+        appendMessage('ai', `Error ${response.status}: ${errText || response.statusText}`, true);
+      } else {
+        const data = await response.json();
+        // Accept answer / response / result / text — or stringify full object
+        const reply =
+          data.answer ?? data.response ?? data.result ?? data.text ??
+          JSON.stringify(data, null, 2);
+        appendMessage('ai', reply);
+      }
+    } catch (err) {
+      removeTyping();
+      appendMessage('ai', `Network error: ${err.message}\n\nMake sure your Flask server is running and CORS is enabled.`, true);
+    }
+
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+</script>
+</body>
+</html>
