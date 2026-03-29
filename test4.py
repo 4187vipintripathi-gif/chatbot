@@ -33,6 +33,18 @@ def answer_user_question(query):
 
     context = "\n".join([match["metadata"]["text"] for match in results["matches"]])
 
+    suggested_questions = []
+
+    for match in results["matches"]:
+        qs = match["metadata"].get("question", [])
+
+        if isinstance(qs, list):
+            suggested_questions.extend(qs)
+        else:
+            suggested_questions.append(qs)
+
+    suggested_questions = list(set(suggested_questions))[:3]
+
     response = client.chat.completions.create(
     model="llama-3.1-8b-instant",  # fast + cheap
     messages=[
@@ -53,7 +65,7 @@ def answer_user_question(query):
             ],
             temperature=0
         )
-    return response.choices[0].message.content
+    return response.choices[0].message.content,suggested_questions
 
 @app.route('/', methods=['GET'])
 def welcome():
@@ -65,10 +77,11 @@ def handle_query():
     
     query = data.get("question", "")
 
-    answer = answer_user_question(query)
-    
+    answer, suggested_questions = answer_user_question(query)
+
     return jsonify({
-        "answer": answer
+        "answer": answer,
+        "suggested_questions": suggested_questions
     })
 
 if __name__ == '__main__':
